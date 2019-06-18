@@ -152,7 +152,7 @@ get_result <- function(dat, curves, weightages) {
 
 get_rep_ability <- function(result) {
   
-  rep_ability <- results %>% 
+  rep_ability <- result %>% 
     group_by(rep_id, product_knowledge, sales_skills, territory_management_ability, work_motivation, behavior_efficiency) %>% 
     summarise(potential = sum(potential),
               sales = sum(sales),
@@ -169,7 +169,8 @@ get_rep_ability <- function(result) {
            work_motivation = round(work_motivation, 1),
            behavior_efficiency = round(behavior_efficiency, 1)) %>% 
     select(`rep_id`, `product_knowledge`, `sales_skills`, `territory_management_ability`, `work_motivation`, `behavior_efficiency`)
-  colnames(rep_ability) <- c("representative-id", "product-knowledge", "sales-ability", "regional-management-ability", "job-enthusiasm", "behavior-validity")
+  colnames(rep_ability) <- c("representative-id", "product-knowledge", "sales-ability", "regional-management-ability", 
+                             "job-enthusiasm", "behavior-validity")
   
   return(rep_ability)
 }
@@ -270,12 +271,13 @@ get_action_kpi <- function(rep_ability, dat) {
 
 get_report <- function(result, dat) {
   
-  hosp_report <- results %>% 
+  hosp_report <- result %>% 
     mutate(growth = round(sales / p_sales - 1, 2)) %>% 
     select(`dest_id`, `resource_id`, `goods_id`, `potential`, `sales`, `quota`, `market_share`, `quota_rate`, `growth`)
-  colnames(hosp_report) <- c("dest-config-id", "resource-config-id", "goods-config-id", "potential", "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
+  colnames(hosp_report) <- c("dest-config-id", "resource-config-id", "goods-config-id", "potential", 
+                             "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
   
-  rep_report <- results %>% 
+  rep_report <- result %>% 
     select(`resource_id`, `goods_id`, `potential`, `p_sales`, `sales`, `quota`) %>% 
     group_by(resource_id, goods_id) %>% 
     summarise(potential = sum(potential),
@@ -291,7 +293,7 @@ get_report <- function(result, dat) {
     select(`resource_id`, `goods_id`, `potential`, `sales`, `quota`, `market_share`, `quota_rate`, `growth`)
   colnames(rep_report) <- c("resource-config-id", "goods-config-id", "potential", "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
   
-  prod1_report <- results %>% 
+  prod1_report <- result %>% 
     select(`goods_id`, `potential`, `p_sales`, `sales`, `quota`) %>% 
     group_by(goods_id) %>% 
     summarise(potential = sum(potential),
