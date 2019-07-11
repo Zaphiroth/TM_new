@@ -1,15 +1,11 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 # ProjectName:  TM_new
-# Purpose:      Functions of TM_new
-# programmer:   Zhe Liu & Peng Qian
-# Date:         17-06-2019
+# Purpose:      Functions of TM new
+# programmer:   Zhe Liu
+# Date:         08-07-2019
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
-
-##------------------------------------------------------------------------------
-##--                 Curves computation
-##------------------------------------------------------------------------------
-
+##---- Curve ----
 curve_func <- function(curve, curves, input) {
   
   curve_data <- curves[[curve]]
@@ -31,23 +27,35 @@ curve_func <- function(curve, curves, input) {
   return(y)
 }
 
+##---- Preprocess ----
+preprocess <- function(receive) {
+  input_data
+  p_sales_data
+  p_representative_ability
+  p_action_kpi
+  hospital_data
+  representative_data
+  product_data
+  competition_data
+}
 
-##------------------------------------------------------------------------------
-##--                 Data preprocess
-##------------------------------------------------------------------------------
+##---- Postprocess ----
 
-preprocess <- function(receive) {}
-
-
-
-##------------------------------------------------------------------------------
-##--                 Calculation function
-##------------------------------------------------------------------------------
-
-get_result <- function(dat, curves, weightages) {
+##---- Calculation ----
+get_result <- function(input_data, p_data, curves, weightages) {
   
-  dat <- dat %>% 
-    mutate(budget = budget / total_budget * 100)
+  dat <- input_data$business_input %>% 
+    left_join(input_data$rep_input, by = c("resource_id", "rep_id")) %>% 
+    bind_cols(input_data$manager_input[rep(1, each = 10), ]) %>% 
+    left_join(p_data$p_hospital_sales_info, by = c("hosp_id", "prod_id")) %>% 
+    left_join(p_data$p_rep_ability_info, by = c("rep_id")) %>% 
+    select(`dest_id`, `hosp_id`, `hosp_size`, `p_sales`, `p_market_share`, `p_offer_attractiveness`, `p_customer_relationship`, 
+           `p_potential`, `resource_id`, `rep_id`, `p_territory_management_ability`, `p_sales_skills`, `p_product_knowledge`, 
+           `p_behavior_efficiency`, `p_work_motivation`, `goods_id`, `prod_id`, `life_cycle`, `quota`, `budget`, `meeting_attendance`, 
+           `call_time_factor`, `total_budget`, `field_work`, `one_on_one_coaching`, `team_meeting`, `business_strategy_planning`, 
+           `admin_work`, `employee_kpi_and_compliance_check`, `kol_management`, `territory_management_training`, `sales_skills_training`, 
+           `product_knowledge_training`, `performance_review`, `career_development_guide`) %>% 
+    mutate(budget = budget/total_budget)
   
   # general ability
   dat01 <- dat %>% 
@@ -138,19 +146,13 @@ get_result <- function(dat, curves, weightages) {
     mutate(potential = p_potential,
            market_share = sapply(offer_attractiveness, function(x) {curve_func("curve28", curves, x)}),
            market_share = round(market_share / 100, 2),
-           sales = round(potential * market_share / 4, 2),
-           quota_rate = ifelse(quota == 0, 
-                               0, 
-                               round(sales / quota, 2)))
+           sales = round(potential * market_share / 4, 2))
   
   return(dat09)
 }
 
-##------------------------------------------------------------------------------
-##--                 Update representative information
-##------------------------------------------------------------------------------
-
-get_rep_ability <- function(result) {
+##---- Report ----
+update_rep_ability <- function(result, p_action_kpi) {
   
   rep_ability <- result %>% 
     group_by(rep_id, product_knowledge, sales_skills, territory_management_ability, work_motivation, behavior_efficiency) %>% 
@@ -171,11 +173,6 @@ get_rep_ability <- function(result) {
     select(`rep_id`, `product_knowledge`, `sales_skills`, `territory_management_ability`, `work_motivation`, `behavior_efficiency`)
   colnames(rep_ability) <- c("representative-id", "product-knowledge", "sales-ability", "regional-management-ability", 
                              "job-enthusiasm", "behavior-validity")
-  
-  return(rep_ability)
-}
-
-get_action_kpi <- function(rep_ability, dat) {
   
   action_kpi <- p_action_kpi %>% 
     left_join(rep_ability, by = c("representative-id")) %>% 
@@ -262,22 +259,24 @@ get_action_kpi <- function(rep_ability, dat) {
                                                                0))))) %>% 
     select(`representative-id`, `target-number`, `target-coverage`, `high-level-frequency`, `middle-level-frequency`, `low-level-frequency`)
   
-  return(action_kpi)
+  rep_ability_report <- list("rep_ability" = rep_ability,
+                             "action_kpi" = action_kpi)
+  
+  return(rep_ability_report)
 }
 
-##------------------------------------------------------------------------------
-##--                 Generate reports
-##------------------------------------------------------------------------------
-
-get_report <- function(result, dat) {
+get_sales_report <- function(result, competition_data) {
   
-  hosp_report <- result %>% 
-    mutate(growth = round(sales / p_sales - 1, 2)) %>% 
+  hosp_sales_report <- result %>% 
+    mutate(quota_rate = ifelse(quota == 0, 
+                               0, 
+                               round(sales / quota, 2)),
+           growth = round(sales / p_sales - 1, 2)) %>% 
     select(`dest_id`, `resource_id`, `goods_id`, `potential`, `sales`, `quota`, `market_share`, `quota_rate`, `growth`)
-  colnames(hosp_report) <- c("dest-config-id", "resource-config-id", "goods-config-id", "potential", 
-                             "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
+  colnames(hosp_report) <- c("dest-config-id", "resource-config-id", "goods-config-id", "potential", "sales", "sales-quota",
+                             "share", "quota-achievement", "sales-growth")
   
-  rep_report <- result %>% 
+  rep_sales_report <- result %>% 
     select(`resource_id`, `goods_id`, `potential`, `p_sales`, `sales`, `quota`) %>% 
     group_by(resource_id, goods_id) %>% 
     summarise(potential = sum(potential),
@@ -291,9 +290,10 @@ get_report <- function(result, dat) {
                                round(sales / quota, 2)),
            growth = round(sales / p_sales - 1, 2)) %>% 
     select(`resource_id`, `goods_id`, `potential`, `sales`, `quota`, `market_share`, `quota_rate`, `growth`)
-  colnames(rep_report) <- c("resource-config-id", "goods-config-id", "potential", "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
+  colnames(rep_report) <- c("resource-config-id", "goods-config-id", "potential", "sales", "sales-quota", "share",
+                            "quota-achievement", "sales-growth")
   
-  prod1_report <- result %>% 
+  prod1_sales_report <- result %>% 
     select(`goods_id`, `potential`, `p_sales`, `sales`, `quota`) %>% 
     group_by(goods_id) %>% 
     summarise(potential = sum(potential),
@@ -308,39 +308,44 @@ get_report <- function(result, dat) {
            growth = round(sales / p_sales - 1, 2)) %>% 
     select(`goods_id`, `sales`, `quota`, `market_share`, `quota_rate`, `growth`)
   
-  market_share1 <- sample(50:55, 1)/100 - prod1_report$market_share
-  market_share2 <- market_share1 * sample(60:75, 1)/100
-  market_share3 <- market_share1 - market_share2
+  total_potential <- sum(result)
   
-  potential <- prod1_report$sales / prod1_report$market_share
+  prod2_sales_report <- competition_data %>% 
+    mutate(market_share = market_share_p * sample(seq(0.9, 1.1, 0.01), 1),
+           sales = potential * market_share) %>% 
+    select(`product_id`, `market_share`, `sales`)
   
-  prod2_report <- tibble(goods_id = p_product_sales_report_info$`goods-config-id`[2:3],
-                         market_share = c(market_share2, market_share3)) %>% 
-    mutate(sales = round(potential * market_share, 2),
-           quota = round(sales, -5),
-           quota_rate = ifelse(quota == 0, 
-                               0, 
-                               round(sales / quota, 2)),
-           growth = round(sales / p_product_sales_report_info$sales[2:3] - 1, 2),
-           market_share = round(market_share, 2))
+  product_sales_report <- bind_rows(prod1_sales_report, prod2_sales_report)
+  colnames(product_sales_report) <- c("product-id", "sales-quota", "share", "sales", "quota-achievement", "sales-growth",
+                                      "quota-contribute", "quota-growth", "ytd-sales", "sales-contribute", "sales-year-on-year",
+                                      "sales-month-on-month", "patient-count")
   
-  prod_report <- bind_rows(prod1_report, prod2_report)
+  sales_report <- list("hosp_sales_report" = hosp_sales_report,
+                       "rep_sales_report" = rep_sales_report,
+                       "product_sales_report" = product_sales_report)
   
-  colnames(prod_report) <- c("goods-config-id", "sales", "sales-quota", "share", "quota-achievement", "sales-growth")
+  return(sales_report)
+}
+
+##---- Assessment ----
+get_assessment <- function(result, rep_ability_report) {
   
-  report <- list("hospital_report" = hosp_report,
-                 "representative_report" = rep_report,
-                 "product_report" = prod_report)
-  
-  return(report)
+  index1 <- result %>% 
+    group_by(rep_id) %>% 
+    summarise(potential = sum(potential),
+              p_sales = sum(p_sales)) %>% 
+    ungroup() %>% 
+    mutate(potential_as = sd(potential) / mean(potential),
+           pp_sales_as = sd(p))
 }
 
 
-##------------------------------------------------------------------------------
-##--                 Data postprocess
-##------------------------------------------------------------------------------
 
-postprocess <- function() {}
+
+
+
+
+
 
 
 
