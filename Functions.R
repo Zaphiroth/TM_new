@@ -166,28 +166,28 @@ postprocess_tm <- function(headers, scenario, sales_report, representative_info,
       "representativeAbility" = representative_info$representative_ability,
       "actionKpi" = representative_info$action_kpi,
       "regionDivisionResult" = list(
-        "level" = assessment$code[1],
-        "code" = assessment$level_result[1]
+        "level" = assessment$level_result[1],
+        "code" = assessment$code[1]
       ),
       "targetAssignsResult" = list(
-        "level" = assessment$code[2],
-        "code" = assessment$level_result[2]
+        "level" = assessment$level_result[2],
+        "code" = assessment$code[2]
       ),
       "resourceAssignsResult" = list(
-        "level" = assessment$code[3],
-        "code" = assessment$level_result[3]
+        "level" = assessment$level_result[3],
+        "code" = assessment$code[3]
       ),
       "manageTimeResult" = list(
-        "level" = assessment$code[4],
-        "code" = assessment$level_result[4]
+        "level" = assessment$level_result[4],
+        "code" = assessment$code[4]
       ),
       "manageTeamResult" = list(
-        "level" = assessment$code[5],
-        "code" = assessment$level_result[5]
+        "level" = assessment$level_result[5],
+        "code" = assessment$code[5]
       ),
       "generalPerformanceResult" = list(
-        "level" = assessment$code[6],
-        "code" = assessment$level_result[6]
+        "level" = assessment$level_result[6],
+        "code" = assessment$code[6]
       )
     )
   )
