@@ -9,7 +9,7 @@ calculation <- function(receive) {
   
   if (length(fromJSON(receive)) != 0) {
     
-    receive <<- receive
+    # receive <<- receive
     
     send_data <- tryCatch({
       

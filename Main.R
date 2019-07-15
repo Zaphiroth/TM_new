@@ -19,7 +19,6 @@ source("./Functions.R", encoding = "UTF-8")
 source("./Calculation.R", encoding = "UTF-8")
 
 load("./intermedia.RData")
-p_customer_relationship <- read.csv("./p_customer_relationship.csv")
 envir <- read_json("./envir.json")
 
 options(scipen = 200,
