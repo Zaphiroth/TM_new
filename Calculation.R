@@ -9,7 +9,7 @@ calculation <- function(receive) {
   
   if (length(fromJSON(receive)) != 0) {
     
-    receive <- receive
+    # receive <<- receive
     
     send_data <- tryCatch({
       
@@ -39,7 +39,7 @@ calculation <- function(receive) {
                                         p_representative_ability = dat$p_representative_ability, standard_time = standard_time, 
                                         level_data = level_data)
         
-        send_list <- postprocess_tm(headers = dat$headers, scenario = dat$scenario, sales_report = sales_report, 
+        send_data <- postprocess_tm(headers = dat$headers, scenario = dat$scenario, sales_report = sales_report, 
                                     representative_info = representative_info, assessment = assessment)
       }
       
