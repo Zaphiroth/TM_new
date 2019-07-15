@@ -30,7 +30,9 @@ curve_func <- function(curve, curves, input) {
 ##---- Preprocess ----
 preprocess_tm <- function(receive) {
   
-  data_list <- fromJSON(receive, simplifyDataFrame = TRUE)[[1]][["value"]]
+  data_list <- fromJSON(receive, simplifyVector = FALSE)[[1]][["value"]] %>% 
+    toJSON(auto_unbox = TRUE) %>% 
+    fromJSON(simplifyDataFrame = TRUE)
   
   headers <- list(
     "header" = data_list[["header"]],
@@ -211,6 +213,7 @@ get_result_tm <- function(cal_data, manager_data, p_customer_relationship, curve
   
   # general ability
   dat01 <- cal_data %>% 
+    left_join(p_customer_relationship, by = c("hospital")) %>% 
     mutate(work_motivation = p_work_motivation + (10 - p_work_motivation) * 0.15 * (performance_review + career_development_guide),
            territory_management_ability = p_territory_management_ability + (10 - p_territory_management_ability) * 0.3 * territory_management_training,
            sales_skills = p_sales_skills + (10 - p_sales_skills) * 0.3 * sales_skills_training,

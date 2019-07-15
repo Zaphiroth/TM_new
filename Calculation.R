@@ -13,7 +13,7 @@ calculation <- function(receive) {
     
     send_data <- tryCatch({
       
-      application <- fromJSON(receive, simplifyDataFrame = TRUE)[[1]][["value"]][["header"]][["application"]]
+      application <- fromJSON(receive, simplifyDataFrame = TRUE)[["value"]][["header"]][["application"]]
       
       if (application == "ucb") {
         dat <- preprocess(receive = receive)
