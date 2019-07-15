@@ -1,8 +1,8 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
-# ProjectName:  TM_new
-# Purpose:      Kafka of TM_new
+# ProjectName:  UCB
+# Purpose:      Kafka of UCB
 # programmer:   Zhe Liu & Peng Qian
-# Date:         17-06-2019
+# Date:         06-06-2019
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
 
 
@@ -68,17 +68,19 @@ callRConsumer <- function(consumerName, groupName) {
     
     response <- curl_fetch_memory(url, handle = handle)
     out <- rawToChar(response$content) 
-    print(out)
     if (out != "[]") {
-      if (grep("\"error_code\"", out) == 1) {
+      if (grepl("\"error_code\"", out) == TRUE) {
         stop(out)
       } else {
+        print("进入")
         receive <- paste(out, collapse = "")
+        print(receive)
         calculation(receive)
       }
     }
   }, error = function(e) {
-    if (grep("\"error_code\":404", conditionMessage(e)) == 1) {
+    print(conditionMessage(e))
+    if (grepl("\"error_code\":404", conditionMessage(e)) == TRUE) {
       res <- consumerInstance() # 获取Consumer实例
       subscription(res$groupName, res$consumerName) # 订阅
       listening(callRConsumer, res$consumerName, res$groupName) # 重新监听
