@@ -45,7 +45,6 @@ calculation <- function(receive) {
       
       
     }, error = function(e) {
-      
       send_data <- list("error" = list("code" = 500,
                                        "msg" = "Calculation error. "))
     })
@@ -54,14 +53,3 @@ calculation <- function(receive) {
     sendResultMessage(paste0(options()$uri, "/topics"), options()$sendTopics, send)
   }
 }
-
-
-
-
-
-
-
-
-
-
-

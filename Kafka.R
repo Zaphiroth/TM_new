@@ -58,7 +58,6 @@ subscription <- function(groupName, consumerName) {
 
 ##----
 callRConsumer <- function(consumerName, groupName) {
-  
   tryCatch({
     uri <- options()$uri
     url <- paste0(uri, "/consumers/", groupName ,"/instances/", consumerName, "/records")
@@ -72,9 +71,9 @@ callRConsumer <- function(consumerName, groupName) {
       if (grepl("\"error_code\"", out) == TRUE) {
         stop(out)
       } else {
-        print("进入")
+        # print("进入")
         receive <- paste(out, collapse = "")
-        print(receive)
+        # print(receive)
         calculation(receive)
       }
     }

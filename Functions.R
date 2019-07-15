@@ -211,9 +211,12 @@ get_result_tm <- function(cal_data, manager_data, p_customer_relationship, curve
   #          `product_knowledge_training`, `performance_review`, `career_development_guide`) %>% 
   #   mutate(budget = budget/total_budget)
   
+  p_customer_relationship <- p_customer_relationship %>%
+    setDF() %>%
+    mutate(hospital  = iconv(hospital, "GB18030"))
+  
   # general ability
   dat01 <- cal_data %>% 
-    left_join(p_customer_relationship, by = c("hospital")) %>% 
     mutate(work_motivation = p_work_motivation + (10 - p_work_motivation) * 0.15 * (performance_review + career_development_guide),
            territory_management_ability = p_territory_management_ability + (10 - p_territory_management_ability) * 0.3 * territory_management_training,
            sales_skills = p_sales_skills + (10 - p_sales_skills) * 0.3 * sales_skills_training,
@@ -581,16 +584,3 @@ get_assessment_tm <- function(result, representative_ability, p_representative_a
   
   return(assessment)
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
