@@ -110,7 +110,7 @@ preprocess_tm <- function(receive) {
            "product" = "product-name",
            "quota" = "sales-target",
            "meeting_attendance" = "meeting-places",
-           "call_time_factor" = "visit-time")
+           "call_time" = "visit-time")
   
   cal_data <- bind_cols(input_hospital, input_product, input_representative, input_manager) %>% 
     left_join(p_hospital, by = c("hospital", "product")) %>% 
@@ -196,7 +196,7 @@ postprocess_tm <- function(headers, scenario, sales_report, representative_info,
 }
 
 ##---- Calculation ----
-get_result_tm <- function(cal_data, manager_data, p_customer_relationship, curves, weightages) {
+get_result_tm <- function(cal_data, manager_data, curves, weightages) {
   
   # dat <- input_data$business_input %>% 
   #   left_join(input_data$rep_input, by = c("resource_id", "rep_id")) %>% 
@@ -211,12 +211,18 @@ get_result_tm <- function(cal_data, manager_data, p_customer_relationship, curve
   #          `product_knowledge_training`, `performance_review`, `career_development_guide`) %>% 
   #   mutate(budget = budget/total_budget)
   
-  p_customer_relationship <- p_customer_relationship %>%
-    setDF() %>%
-    mutate(hospital  = iconv(hospital, "GB18030"))
+  # p_customer_relationship <- p_customer_relationship %>%
+  #   setDF() %>%
+  #   mutate(hospital  = iconv(hospital, "GB18030"))
   
   # general ability
   dat01 <- cal_data %>% 
+    mutate(level_factor = 0.8 * potential / sum(potential) + 0.2 * p_sales / sum(p_sales),
+           level = ifelse(level_factor > 0.15,
+                          3,
+                          ifelse(level_factor <= 0.05,
+                                 1,
+                                 2))) %>% 
     mutate(work_motivation = p_work_motivation + (10 - p_work_motivation) * 0.15 * (performance_review + career_development_guide),
            territory_management_ability = p_territory_management_ability + (10 - p_territory_management_ability) * 0.3 * territory_management_training,
            sales_skills = p_sales_skills + (10 - p_sales_skills) * 0.3 * sales_skills_training,
@@ -231,84 +237,84 @@ get_result_tm <- function(cal_data, manager_data, p_customer_relationship, curve
   
   # rep ability efficiency
   dat02 <- dat01 %>% 
-    mutate(quota_restriction_factor = ifelse(quota / p_sales < 0.5 | quota / p_sales > 2, 
-                                             0.8, 
+    mutate(call_time_index = ifelse(level == 1,
+                                    sapply(call_time, function(x) {curve_func("curve10", curves, x)}),
+                                    ifelse(level == 2,
+                                           sapply(call_time, function(x) {curve_func("curve11", curves, x)}),
+                                           ifelse(level == 3,
+                                                  sapply(call_time, function(x) {curve_func("curve12", curves, x)}),
+                                                  0))),
+           quota_restriction_factor = ifelse(quota / p_sales < 0.5 | quota / p_sales > 2, 
+                                             0.6, 
                                              ifelse(quota / p_sales >= 0.5 & quota / p_sales <= 2, 
                                                     1, 
                                                     0)),
-           quota_restriction_factor = sapply(quota_restriction_factor, function(x) {curve_func("curve14", curves, x)}),
+           quota_restriction_index = sapply(quota_restriction_factor, function(x) {curve_func("curve14", curves, x)}),
            rep_ability_efficiency = general_ability * weightages[["weightage03"]]$general_ability + 
-             call_time_factor * weightages[["weightage03"]]$call_time_factor + 
-             quota_restriction_factor * weightages[["weightage03"]]$quota_restriction_factor)
+             call_time_index * weightages[["weightage03"]]$call_time_index + 
+             quota_restriction_index * weightages[["weightage03"]]$quota_restriction_index)
   
   # field work factor
   dat03 <- dat02 %>% 
-    mutate(field_work_factor = sapply(field_work, function(x) {curve_func("curve16", curves, x)}))
+    mutate(field_work_index = sapply(field_work, function(x) {curve_func("curve16", curves, x)}))
   
   # deployment quality
   dat04 <- dat03 %>% 
-    mutate(business_strategy_planning_factor = sapply(business_strategy_planning, function(x) {curve_func("curve18", curves, x)}),
-           admin_work_factor = sapply(admin_work, function(x) {curve_func("curve19", curves, x)}),
-           employee_kpi_and_compliance_check_factor = sapply(employee_kpi_and_compliance_check, function(x) {curve_func("curve20", curves, x)}),
-           team_meeting_factor = sapply(team_meeting, function(x) {curve_func("curve21", curves, x)}),
-           kol_management_factor = sapply(kol_management, function(x) {curve_func("curve22", curves, x)}),
-           deployment_quality = business_strategy_planning_factor * weightages[["weightage04"]]$business_strategy_planning_factor + 
-             admin_work_factor * weightages[["weightage04"]]$admin_work_factor + 
-             employee_kpi_and_compliance_check_factor * weightages[["weightage04"]]$employee_kpi_and_compliance_check_factor + 
-             team_meeting_factor * weightages[["weightage04"]]$team_meeting_factor + 
-             kol_management_factor * weightages[["weightage04"]]$kol_management_factor)
+    mutate(business_strategy_planning_index = sapply(business_strategy_planning, function(x) {curve_func("curve16", curves, x)}),
+           admin_work_index = sapply(admin_work, function(x) {curve_func("curve16", curves, x)}),
+           employee_kpi_and_compliance_check_index = sapply(employee_kpi_and_compliance_check, function(x) {curve_func("curve16", curves, x)}),
+           team_meeting_index = sapply(team_meeting, function(x) {curve_func("curve16", curves, x)}),
+           kol_management_index = sapply(kol_management, function(x) {curve_func("curve16", curves, x)}),
+           deployment_quality = business_strategy_planning_index * weightages[["weightage04"]]$business_strategy_planning_index + 
+             admin_work_index * weightages[["weightage04"]]$admin_work_index + 
+             employee_kpi_and_compliance_check_index * weightages[["weightage04"]]$employee_kpi_and_compliance_check_index + 
+             team_meeting_index * weightages[["weightage04"]]$team_meeting_index + 
+             kol_management_index * weightages[["weightage04"]]$kol_management_index)
   
   # sales performance
   dat05 <- dat04 %>% 
     mutate(sales_performance = rep_ability_efficiency * weightages[["weightage05"]]$rep_ability_efficiency + 
-             field_work_factor * weightages[["weightage05"]]$field_work_factor + 
+             field_work_index * weightages[["weightage05"]]$field_work_index + 
              deployment_quality * weightages[["weightage05"]]$deployment_quality)
   
   # customer relationship
   dat06 <- dat05 %>% 
-    left_join(p_customer_relationship, by = c("hospital")) %>% 
+    # left_join(p_customer_relationship, by = c("hospital")) %>% 
     mutate(budget_prop = budget / manager_data$total_budget * 100,
-           budget_factor = ifelse(hospital_level == "一级", 
+           budget_factor = ifelse(level == 1, 
                                   sapply(budget_prop, function(x) {curve_func("curve02", curves, x)}), 
-                                  ifelse(hospital_level == "二级", 
+                                  ifelse(level == 2, 
                                          sapply(budget_prop, function(x) {curve_func("curve03", curves, x)}), 
-                                         ifelse(hospital_level == "三级", 
+                                         ifelse(level == 3, 
                                                 sapply(budget_prop, function(x) {curve_func("curve04", curves, x)}), 
                                                 0))),
-           meeting_attendance_factor = ifelse(hospital_level == "一级", 
+           meeting_attendance_factor = ifelse(level == 1, 
                                               sapply(meeting_attendance, function(x) {curve_func("curve05", curves, x)}), 
-                                              ifelse(hospital_level == "二级", 
+                                              ifelse(level == 2, 
                                                      sapply(meeting_attendance, function(x) {curve_func("curve06", curves, x)}), 
-                                                     ifelse(hospital_level == "三级", 
+                                                     ifelse(level == 3, 
                                                             sapply(meeting_attendance, function(x) {curve_func("curve07", curves, x)}), 
                                                             0))),
-           customer_relationship_factor = budget_factor * weightages[["weightage06"]]$budget_factor + 
-             meeting_attendance_factor * weightages[["weightage06"]]$meeting_attendance_factor,
-           customer_relationship = p_customer_relationship + (100 - p_customer_relationship) * customer_relationship_factor)
-  
-  # current oa
-  dat07 <- dat06 %>% 
-    mutate(current_oa = sales_performance * weightages[["weightage07"]]$sales_performance + 
-             customer_relationship * weightages[["weightage07"]]$customer_relationship)
-  
-  # offer attractiveness
-  dat08 <- dat07 %>% 
-    mutate(p_offer_attractiveness = sapply(p_share * 100, function(x) {curve_func("curve29", curves, x)}),
-           offer_attractiveness = ifelse(life_cycle == "导入期", 
-                                         current_oa * weightages[["weightage10"]]$current_oa + 
-                                           p_offer_attractiveness * weightages[["weightage10"]]$p_offer_attractiveness, 
-                                         ifelse(life_cycle == "成熟期", 
-                                                current_oa * weightages[["weightage11"]]$current_oa + 
-                                                  p_offer_attractiveness * weightages[["weightage11"]]$p_offer_attractiveness, 
-                                                0)))
+           customer_relationship = (budget_factor * weightages[["weightage06"]]$budget_factor + 
+                                      meeting_attendance_factor * weightages[["weightage06"]]$meeting_attendance_factor) * 100)
   
   # market share, sales
-  dat09 <- dat08 %>% 
-    mutate(share = sapply(offer_attractiveness, function(x) {curve_func("curve28", curves, x)}),
-           share = round(share / 100, 2),
-           sales = round(potential * share / 4, 2))
+  dat07 <- dat06 %>% 
+    mutate(offer_attractiveness = sales_performance * weightages[["weightage07"]]$sales_performance + 
+             customer_relationship * weightages[["weightage07"]]$customer_relationship,
+           share_delta_factor = sapply(offer_attractiveness, function(x) {curve_func("curve28", curves, x)}),
+           share = ifelse(life_cycle == "成熟期",
+                          ifelse(share_delta_factor >= 0,
+                                 p_share + (0.3 - p_share) * share_delta_factor,
+                                 p_share * (1 - share_delta_factor)),
+                          ifelse(life_cycle == "导入期",
+                                 ifelse(share_delta_factor >= 0,
+                                        p_share + (0.15 - p_share) * share_delta_factor,
+                                        p_share * (1 - share_delta_factor)),
+                                 0)),
+           sales = potential / 4 * share)
   
-  return(dat09)
+  return(dat07)
 }
 
 ##---- Report ----
