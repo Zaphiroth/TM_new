@@ -30,14 +30,12 @@ calculation <- function(receive) {
         dat <- preprocess_tm(receive = receive)
         
         result <- get_result_tm(cal_data = dat$cal_data, manager_data = dat$manager_data, 
-                                p_customer_relationship = p_customer_relationship, 
                                 curves = curves, weightages = weightages)
         
         representative_info <- get_representative_info_tm(result = result, p_action_kpi = dat$p_action_kpi)
         sales_report <- get_sales_report_tm(result = result, competition_data = dat$competition_data)
-        assessment <- get_assessment_tm(result = result, representative_ability = representative_info$representative_ability, 
-                                        p_representative_ability = dat$p_representative_ability, standard_time = standard_time, 
-                                        level_data = level_data)
+        assessment <- get_assessment_tm(result = result, manager_data = manager_data, 
+                                        standard_time = standard_time, level_data = level_data)
         
         send_data <- postprocess_tm(headers = dat$headers, scenario = dat$scenario, sales_report = sales_report, 
                                     representative_info = representative_info, assessment = assessment)

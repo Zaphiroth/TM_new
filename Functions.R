@@ -166,27 +166,27 @@ postprocess_tm <- function(headers, scenario, sales_report, representative_info,
       "representativeAbility" = representative_info$representative_ability,
       "actionKpi" = representative_info$action_kpi,
       "regionDivisionResult" = list(
-        "level" = assessment$level_result[1],
+        "level" = assessment$level[1],
         "code" = assessment$code[1]
       ),
       "targetAssignsResult" = list(
-        "level" = assessment$level_result[2],
+        "level" = assessment$level[2],
         "code" = assessment$code[2]
       ),
       "resourceAssignsResult" = list(
-        "level" = assessment$level_result[3],
+        "level" = assessment$level[3],
         "code" = assessment$code[3]
       ),
       "manageTimeResult" = list(
-        "level" = assessment$level_result[4],
+        "level" = assessment$level[4],
         "code" = assessment$code[4]
       ),
       "manageTeamResult" = list(
-        "level" = assessment$level_result[5],
+        "level" = assessment$level[5],
         "code" = assessment$code[5]
       ),
       "generalPerformanceResult" = list(
-        "level" = assessment$level_result[6],
+        "level" = assessment$level[6],
         "code" = assessment$code[6]
       )
     )
@@ -197,23 +197,6 @@ postprocess_tm <- function(headers, scenario, sales_report, representative_info,
 
 ##---- Calculation ----
 get_result_tm <- function(cal_data, manager_data, curves, weightages) {
-  
-  # dat <- input_data$business_input %>% 
-  #   left_join(input_data$rep_input, by = c("resource_id", "rep_id")) %>% 
-  #   bind_cols(input_data$manager_input[rep(1, each = 10), ]) %>% 
-  #   left_join(p_data$p_hospital_sales_info, by = c("hosp_id", "prod_id")) %>% 
-  #   left_join(p_data$p_rep_ability_info, by = c("rep_id")) %>% 
-  #   select(`dest_id`, `hosp_id`, `hosp_size`, `p_sales`, `p_market_share`, `p_offer_attractiveness`, `p_customer_relationship`, 
-  #          `p_potential`, `resource_id`, `rep_id`, `p_territory_management_ability`, `p_sales_skills`, `p_product_knowledge`, 
-  #          `p_behavior_efficiency`, `p_work_motivation`, `goods_id`, `prod_id`, `life_cycle`, `quota`, `budget`, `meeting_attendance`, 
-  #          `call_time_factor`, `total_budget`, `field_work`, `one_on_one_coaching`, `team_meeting`, `business_strategy_planning`, 
-  #          `admin_work`, `employee_kpi_and_compliance_check`, `kol_management`, `territory_management_training`, `sales_skills_training`, 
-  #          `product_knowledge_training`, `performance_review`, `career_development_guide`) %>% 
-  #   mutate(budget = budget/total_budget)
-  
-  # p_customer_relationship <- p_customer_relationship %>%
-  #   setDF() %>%
-  #   mutate(hospital  = iconv(hospital, "GB18030"))
   
   # general ability
   dat01 <- cal_data %>% 
@@ -228,7 +211,7 @@ get_result_tm <- function(cal_data, manager_data, curves, weightages) {
            sales_skills = p_sales_skills + (10 - p_sales_skills) * 0.3 * sales_skills_training,
            product_knowledge = p_product_knowledge + (10 - p_product_knowledge) * 0.3 * product_knowledge_training,
            behavior_efficiency_factor = sapply(one_on_one_coaching, function(x) {curve_func("curve09", curves, x)}),
-           behavior_efficiency = p_behavior_efficiency + (10 - p_behavior_efficiency) * behavior_efficiency_factor,
+           behavior_efficiency = p_behavior_efficiency + (10 - p_behavior_efficiency) * 0.3 * behavior_efficiency_factor,
            general_ability = (territory_management_ability * weightages[["weightage02"]]$territory_management_ability + 
                                 sales_skills * weightages[["weightage02"]]$sales_skills + 
                                 product_knowledge * weightages[["weightage02"]]$product_knowledge + 
@@ -260,11 +243,11 @@ get_result_tm <- function(cal_data, manager_data, curves, weightages) {
   
   # deployment quality
   dat04 <- dat03 %>% 
-    mutate(business_strategy_planning_index = sapply(business_strategy_planning, function(x) {curve_func("curve16", curves, x)}),
-           admin_work_index = sapply(admin_work, function(x) {curve_func("curve16", curves, x)}),
-           employee_kpi_and_compliance_check_index = sapply(employee_kpi_and_compliance_check, function(x) {curve_func("curve16", curves, x)}),
-           team_meeting_index = sapply(team_meeting, function(x) {curve_func("curve16", curves, x)}),
-           kol_management_index = sapply(kol_management, function(x) {curve_func("curve16", curves, x)}),
+    mutate(business_strategy_planning_index = sapply(business_strategy_planning, function(x) {curve_func("curve18", curves, x)}),
+           admin_work_index = sapply(admin_work, function(x) {curve_func("curve18", curves, x)}),
+           employee_kpi_and_compliance_check_index = sapply(employee_kpi_and_compliance_check, function(x) {curve_func("curve18", curves, x)}),
+           team_meeting_index = sapply(team_meeting, function(x) {curve_func("curve18", curves, x)}),
+           kol_management_index = sapply(kol_management, function(x) {curve_func("curve18", curves, x)}),
            deployment_quality = business_strategy_planning_index * weightages[["weightage04"]]$business_strategy_planning_index + 
              admin_work_index * weightages[["weightage04"]]$admin_work_index + 
              employee_kpi_and_compliance_check_index * weightages[["weightage04"]]$employee_kpi_and_compliance_check_index + 
@@ -303,15 +286,16 @@ get_result_tm <- function(cal_data, manager_data, curves, weightages) {
     mutate(offer_attractiveness = sales_performance * weightages[["weightage07"]]$sales_performance + 
              customer_relationship * weightages[["weightage07"]]$customer_relationship,
            share_delta_factor = sapply(offer_attractiveness, function(x) {curve_func("curve28", curves, x)}),
-           share = ifelse(life_cycle == "成熟期",
-                          ifelse(share_delta_factor >= 0,
-                                 p_share + (0.3 - p_share) * share_delta_factor,
-                                 p_share * (1 - share_delta_factor)),
-                          ifelse(life_cycle == "导入期",
-                                 ifelse(share_delta_factor >= 0,
-                                        p_share + (0.15 - p_share) * share_delta_factor,
-                                        p_share * (1 - share_delta_factor)),
-                                 0)),
+           # share = ifelse(life_cycle == "成熟期",
+           #                ifelse(share_delta_factor >= 0,
+           #                       p_share + (0.4 - p_share) * share_delta_factor,
+           #                       p_share * (1 + share_delta_factor)),
+           #                ifelse(life_cycle == "导入期",
+           #                       ifelse(share_delta_factor >= 0,
+           #                              p_share + (0.15 - p_share) * share_delta_factor,
+           #                              p_share * (1 + share_delta_factor)),
+           #                       0)),
+           share = p_share * (1 + share_delta_factor),
            sales = potential / 4 * share)
   
   return(dat07)
@@ -500,93 +484,103 @@ get_sales_report_tm <- function(result, competition_data) {
 }
 
 ##---- Assessment ----
-get_assessment_tm <- function(result, representative_ability, p_representative_ability, standard_time, level_data) {
+get_assessment_tm <- function(result, manager_data, standard_time, level_data) {
   
   ## 区域划分
   index1 <- result %>% 
-    group_by(representative_id) %>% 
+    group_by(representative, general_ability) %>% 
     summarise(potential = sum(potential),
               p_sales = sum(p_sales)) %>% 
-    ungroup()
+    ungroup() %>% 
+    mutate(potential_prop = potential / sum(potential),
+           p_sales_prop = p_sales / sum(p_sales),
+           prop1 = 0.6 * potential_prop + 0.4 * p_sales_prop,
+           prop2 = (general_ability - 50) / sum(general_ability - 50),
+           score = abs(prop1 - prop2))
   
-  score1.1 <- sd(index1$potential) / mean(index1$potential)
-  score1.2 <- sd(index1$p_sales) / mean(index1$p_sales)
-  score1 <- 0.6 * score1.1 + 0.4 * score1.2
+  score1 <- mean(index1$score)
   
   ## 指标分配
   index2 <- result %>% 
-    mutate(potential_contribution = potential / sum(potential),
-           p_sales_contribution = p_sales / sum(p_sales),
-           standard_contribution = 0.3 * potential_contribution + 0.7 * p_sales_contribution,
-           quota_contribution = quota / sum(quota),
-           quota_diff = abs(quota_contribution - standard_contribution) * 100) %>% 
-    mutate(quota_sales_growth = quota / p_sales - 1,
-           sales_growth = sales / p_sales - 1,
-           quota_sales_growth_rank = dense_rank(-quota_sales_growth),
-           sales_growth_rank = dense_rank(-sales_growth),
-           growth_diff = abs(quota_sales_growth_rank - sales_growth_rank) / quota_sales_growth_rank)
+    select(potential, p_sales, quota, sales) %>% 
+    mutate(potential_prop = potential / sum(potential),
+           p_sales_prop = p_sales / sum(p_sales),
+           prop1 = 0.6 * potential_prop + 0.4 * p_sales_prop,
+           prop2 = quota / manager_data$total_quota,
+           score1 = abs(prop1 - prop2)) %>% 
+    mutate(quota_growth = quota - p_sales,
+           sales_growth = sales - p_sales,
+           prop3 = quota_growth / sum(quota_growth),
+           prop4 = sales_growth / sum(sales_growth),
+           score2 = abs(prop3 - prop4))
   
-  score2.1 <- sd(index2$quota_diff)
-  score2.2 <- sum(index2$growth_diff)
-  score2 <- 0.7 * score2.1 + 0.3 * score2.2
+  score2 <- 0.7 * mean(index2$score1) + 0.3 * mean(index2$score2)
   
   ## 资源分配
-  score3 <- sum(result$sales) / sum(result$quota)
+  index3 <- result %>% 
+    select(potential, p_sales, budget, call_time, representative_time, meeting_attendance) %>% 
+    mutate(potential_prop = potential / sum(potential),
+           p_sales_prop = p_sales / sum(p_sales),
+           prop1 = 0.6 * potential_prop + 0.4 * p_sales_prop,
+           prop2 = budget / manager_data$total_budget,
+           prop3 = call_time / (representative_time * 5),
+           prop4 = meeting_attendance / manager_data$total_place,
+           score1 = abs(prop1 - prop2),
+           score2 = abs(prop1 - prop3),
+           score3 = abs(prop1 - prop4))
+  
+  score3 <- 0.45 * mean(index3$score1) + 0.25 * mean(index3$score2) + 0.3 * mean(index3$score3)
   
   ## 时间管理
-  index4.1 <- result %>% 
-    mutate(field_work = sum(field_work),
-           one_on_one_coaching = sum(one_on_one_coaching)) %>% 
-    select(kol_management, employee_kpi_and_compliance_check, team_meeting, field_work, one_on_one_coaching, 
-           business_strategy_planning, admin_work) %>% 
+  index4 <- result %>% 
+    select(representative, field_work, one_on_one_coaching, employee_kpi_and_compliance_check, 
+           admin_work, kol_management, business_strategy_planning, team_meeting) %>% 
     distinct() %>% 
-    gather("index", "value") %>% 
-    left_join(standard_time, by = "index") %>% 
-    mutate(time_diff1 = abs(value - standard) / standard * weightage)
+    group_by(employee_kpi_and_compliance_check, admin_work, kol_management, 
+             business_strategy_planning, team_meeting) %>% 
+    summarise(field_work = sum(field_work),
+              one_on_one_coaching = sum(one_on_one_coaching)) %>% 
+    ungroup() %>% 
+    melt(variable.name = "index", variable.factor = FALSE, value.factor = FALSE) %>% 
+    left_join(standard_time, by = c("index")) %>% 
+    mutate(prop1 = standard / manager_data$manager_time,
+           prop2 = value / manager_data$manager_time,
+           score = abs(prop1 - prop2))
   
-  index4.2 <- result %>% 
-    group_by(representative_id, field_work) %>% 
-    summarise(quota = sum(quota)) %>% 
-    left_join(representative_ability, by = "representative_id") %>% 
-    mutate(field_work_prop = ifelse(sum(field_work) == 0,
-                                    0,
-                                    field_work / sum(field_work)),
-           quota_prop = ifelse(sum(quota) == 0,
-                               0,
-                               quota / sum(quota)),
-           field_work_rank = dense_rank(-field_work_prop),
-           quota_rank = dense_rank(-quota_prop),
-           time_diff2 = abs(field_work_rank - quota_rank) / quota_rank)
-  
-  score4 <- 0.4 * sum(index4.1$time_diff1) + 0.6 * sum(index4.2$time_diff2)
+  score4 <- mean(index4$score)
   
   ## 团队管理
-  index5.1 <- representative_ability %>% 
-    select(product_knowledge, sales_skills, territory_management_ability, work_motivation, behavior_efficiency) %>% 
-    summarise_if(is.numeric, c("mean", "var")) %>% 
-    gather("index", "value")
+  index5 <- result %>% 
+    select(representative, general_ability, p_product_knowledge, p_sales_skills, 
+           p_territory_management_ability, p_work_motivation, p_behavior_efficiency) %>% 
+    distinct() %>% 
+    mutate(p_general_ability = (0.2 * p_territory_management_ability + 0.25 * p_sales_skills + 
+                                  0.25 * p_product_knowledge + 0.15 * p_behavior_efficiency + 0.15 * p_work_motivation) * 10,
+           delta1 = 100 - p_general_ability,
+           delta2 = general_ability - p_general_ability)
   
-  index5.2 <- p_representative_ability %>% 
-    select(p_product_knowledge, p_sales_skills, p_territory_management_ability, p_work_motivation, p_behavior_efficiency) %>% 
-    summarise_if(is.numeric, c("mean", "var")) %>% 
-    gather("index", "value")
-  
-  score5.1 <- index5.1$value[which(grepl(c("_mean"), index5.1$index))] / index5.2$value[which(grepl(c("_mean"), index5.2$index))] - 1
-  score5.2 <- index5.1$value[which(grepl(c("_var"), index5.1$index))] / index5.2$value[which(grepl(c("_var"), index5.2$index))] - 1
-  score5 <- 0.5 * sum(score5.1) + 0.5 * sum(score5.2)
+  score5 <- 0.2 - mean(index5$delta2) / mean(index5$delta1)
   
   ## overall
   assessment <- data.frame(
-    "index" = c("region_division", "target_assigns", "resource_assigns", "manage_time", "manage_team", "general_performance"),
-    "score" = c(score1, score2, score3, score4, score5, mean(score1, score2, score3, score4, score5))
+    "index" = c("region_division", "target_assigns", "resource_assigns", "manage_time", "manage_team"),
+    "score" = c(score1, score2, score3, score4, score5),
+    stringsAsFactors = FALSE
   ) %>% 
     left_join(level_data, by = c("index")) %>% 
-    mutate(level_result = ifelse(score > level1,
-                                 1,
-                                 ifelse(score < level2,
-                                        3,
-                                        2))) %>% 
-    select(index, score, code, level_result)
+    mutate(level = ifelse(score < level1,
+                          1,
+                          ifelse(score > level2,
+                                 3,
+                                 2))) %>% 
+    select(index, code, level)
+  
+  general_performance <- data.frame("index" = "general_performance",
+                                    "code" = 5,
+                                    "level" = round(mean(assessment$level)),
+                                    stringsAsFactors = FALSE)
+  
+  assessment <- bind_rows(assessment, general_performance)
   
   return(assessment)
 }
